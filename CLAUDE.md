@@ -35,7 +35,7 @@ Migration Zustand → Prisma + API routes terminée. Déploiement Hostinger opé
   - `SSH_HOST` = 72.61.197.14
   - `SSH_USER` = root
   - `SSH_KEY` = clé SSH privée locale autorisée sur le serveur
-- Dernier déploiement GitHub Actions réussi après relance du run `27132131095`
+- GitHub Actions opérationnel : les derniers runs de déploiement se terminent en succès
 
 ### ✅ Étape 4 — Déploiement Hostinger (terminé)
 - docker-compose.yml sur le serveur mis à jour avec services `postgres`, `adminer`, `crm`
