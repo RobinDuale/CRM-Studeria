@@ -9,9 +9,14 @@ out/
 build/
 
 # env files — NEVER commit secrets
+.env
 .env.local
 .env.*.local
 .env.production
+
+# Local AI/project context — do not publish
+CLAUDE.md
+JOURNAL.md
 
 # debug
 npm-debug.log*

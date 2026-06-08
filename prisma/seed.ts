@@ -5,7 +5,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Admin user
-  const password = await hash("admin123", 10);
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error("SEED_ADMIN_PASSWORD must be set before running prisma/seed.ts");
+  }
+
+  const password = await hash(adminPassword, 10);
   await prisma.user.upsert({
     where: { email: "robin@duale.fr" },
     update: {},
@@ -80,7 +85,7 @@ async function main() {
 
   console.log("\n✅ Base de données initialisée avec succès !");
   console.log("   Email : robin@duale.fr");
-  console.log("   Mot de passe : admin123");
+  console.log("   Mot de passe : défini via SEED_ADMIN_PASSWORD");
 }
 
 main()
