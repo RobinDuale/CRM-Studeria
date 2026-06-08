@@ -3,7 +3,7 @@
 ## Contexte du projet
 
 Application CRM full-stack : Next.js 15 + PostgreSQL + NextAuth.js + Tailwind CSS.
-Migration Zustand → Prisma + API routes terminée. Déploiement Hostinger en cours (build Docker encore en échec).
+Migration Zustand → Prisma + API routes terminée. Déploiement Hostinger opérationnel via Docker, Traefik et GitHub Actions.
 
 ## Stack technique retenue
 
@@ -13,7 +13,7 @@ Migration Zustand → Prisma + API routes terminée. Déploiement Hostinger en c
 - **DB UI :** Adminer (container Docker léger)
 - **Pas de Supabase** — décision prise pour éviter les coûts de licence
 - **Hébergement :** VPS Hostinger (Docker + Traefik existants)
-- **CI/CD :** GitHub → GitHub Actions → SSH → rebuild Docker (workflow créé, secrets pas encore configurés)
+- **CI/CD :** GitHub → GitHub Actions → SSH → `git pull` + rebuild Docker + redémarrage du container CRM
 
 ## État d'avancement
 
@@ -29,26 +29,31 @@ Migration Zustand → Prisma + API routes terminée. Déploiement Hostinger en c
 - `.env.local` et `.env.production` dans `.gitignore`
 - `.env` (non-sensible) committé
 
-### 🔄 Étape 3 — GitHub Actions (en cours)
-- Fichier `.github/workflows/deploy.yml` créé et committé
-- **TODO** : Ajouter les secrets dans les settings du repo GitHub :
+### ✅ Étape 3 — GitHub Actions (terminé)
+- Fichier `.github/workflows/deploy.yml` créé, committé et poussé
+- Secrets GitHub Actions configurés :
   - `SSH_HOST` = 72.61.197.14
   - `SSH_USER` = root
-  - `SSH_KEY` = contenu de `~/.ssh/id_rsa`
+  - `SSH_KEY` = clé SSH privée locale autorisée sur le serveur
+- Dernier déploiement GitHub Actions réussi après relance du run `27132131095`
 
-### 🔄 Étape 4 — Déploiement Hostinger (en cours — build Docker en échec)
+### ✅ Étape 4 — Déploiement Hostinger (terminé)
 - docker-compose.yml sur le serveur mis à jour avec services `postgres`, `adminer`, `crm`
 - `/root/crm/.env.production.local` créé sur le serveur (non committé)
-- **Dernier commit poussé** : `db4df1c` — fix dossier `public/` manquant
-- **Prochaine action** : `git pull + docker compose build crm + docker compose up -d crm` sur le serveur
-- CRM : crmstud.duale.fr (DNS A record à créer : crmstud.duale.fr → 72.61.197.14)
+- **Dernier commit poussé** : `ed43b49` — skip deploy migrations when none exist
+- Build Docker serveur réussi et container CRM démarré
+- CRM : https://crmstud.duale.fr
+- Vérification HTTP publique : `https://crmstud.duale.fr` répond `200 OK` et sert la page de login
 - Adminer : adminer.srv1161197.hstgr.cloud
 
 ## Historique des erreurs Docker corrigées
 1. ~~Sidebar importait `@/lib/supabase/client`~~ → remplacé par NextAuth `signOut`
 2. ~~`QuoteLine` importé depuis `@prisma/client` (pas encore généré au build)~~ → remplacé par `@/lib/types`
 3. ~~`/app/public` not found~~ → dossier `public/.gitkeep` créé et committé
-4. `prisma generate` manquant dans le Dockerfile → ajouté (`RUN pnpm prisma generate` avant `RUN pnpm build`)
+4. ~~`prisma generate` manquant dans le Dockerfile~~ → ajouté (`RUN pnpm prisma generate` avant `RUN pnpm build`)
+5. ~~Prisma ne trouvait pas OpenSSL dans l'image Alpine~~ → ajouté `RUN apk add --no-cache openssl`
+6. ~~`npx prisma migrate deploy` installait Prisma 7 et ne trouvait pas `prisma/schema.prisma` dans le container runtime~~ → dossier `prisma` copié dans l'image finale et commande pinée sur `prisma@5.22.0`
+7. ~~`migrate deploy` échouait car aucun dossier `prisma/migrations` n'existe et la base n'est pas vide~~ → étape de migration rendue conditionnelle dans GitHub Actions
 
 ## Architecture des pages (pattern Server → Client)
 
@@ -65,8 +70,8 @@ Chaque page dashboard suit ce pattern :
 - `src/types/next-auth.d.ts` : augmentation des types Session et JWT pour inclure `user.id`
 - `prisma/schema.prisma` : schéma Prisma 5 avec `url = env("DATABASE_URL")`
 - `prisma/seed.ts` : seed idempotent avec `upsert`
-- `Dockerfile` : multi-stage build, inclut `pnpm prisma generate` avant `pnpm build`
-- `.github/workflows/deploy.yml` : CI/CD GitHub Actions → SSH → docker compose
+- `Dockerfile` : multi-stage build, installe OpenSSL, inclut `pnpm prisma generate` avant `pnpm build`, copie `public`, `prisma`, `.next/standalone` et `.next/static` dans l'image runtime
+- `.github/workflows/deploy.yml` : CI/CD GitHub Actions → SSH → `git pull` → `docker compose build crm` → `docker compose up -d crm` → migrations Prisma conditionnelles
 
 ## Serveur Hostinger
 
@@ -79,6 +84,8 @@ Chaque page dashboard suit ce pattern :
 - docker-compose.yml principal : `/root/docker-compose.yml`
 - Code CRM : `/root/crm/`
 - Env prod : `/root/crm/.env.production.local`
+- URL CRM : https://crmstud.duale.fr
+- DNS CRM : `crmstud.duale.fr` pointe vers `72.61.197.14`
 - **Documentation complète du serveur** : https://app.notion.com/p/3795b86a8bb4804d978acc47e3ccbb42
 
 ## Règles de développement
@@ -100,6 +107,9 @@ pnpm dev
 # Build local
 pnpm build
 
+# Build Docker local
+docker build -t crm2-local .
+
 # Vider le cache Next.js
 Remove-Item -Recurse -Force .next
 
@@ -112,9 +122,9 @@ pnpm seed
 ```
 
 ```python
-# Rebuild sur Hostinger (via Python paramiko)
+# Rebuild sur Hostinger
 # cd /root/crm && git pull origin main
 # cd /root && docker compose build crm > /tmp/crm_build.log 2>&1
 # docker compose up -d crm
-# docker compose exec -T crm npx prisma migrate deploy
+# if [ -d /root/crm/prisma/migrations ] && [ "$(ls -A /root/crm/prisma/migrations)" ]; then docker compose exec -T crm npx prisma@5.22.0 migrate deploy --schema=prisma/schema.prisma; fi
 ```
