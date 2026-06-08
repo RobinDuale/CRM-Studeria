@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { QuoteLine } from "@prisma/client";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -27,7 +28,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       due_date: due,
       notes: quote.notes,
       lines: {
-        create: quote.lines.map((l) => ({
+        create: quote.lines.map((l: QuoteLine) => ({
           description: l.description,
           quantity: l.quantity,
           unit_price: l.unit_price,
