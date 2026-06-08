@@ -3,49 +3,70 @@
 ## Contexte du projet
 
 Application CRM full-stack : Next.js 15 + PostgreSQL + NextAuth.js + Tailwind CSS.
-Développement local terminé (Phases 1–4 complètes avec mock data Zustand).
+Migration Zustand → Prisma + API routes terminée. Déploiement Hostinger en cours (build Docker encore en échec).
 
 ## Stack technique retenue
 
 - **Base de données :** PostgreSQL dans Docker (sur VPS Hostinger)
-- **ORM :** Prisma
-- **Auth :** NextAuth.js (sessions stockées en PostgreSQL)
+- **ORM :** Prisma 5.22.0 (pas Prisma 7 — breaking changes incompatibles)
+- **Auth :** NextAuth.js v4.24.14 (credentials provider, JWT, bcryptjs)
 - **DB UI :** Adminer (container Docker léger)
 - **Pas de Supabase** — décision prise pour éviter les coûts de licence
 - **Hébergement :** VPS Hostinger (Docker + Traefik existants)
-- **CI/CD :** GitHub → GitHub Actions → SSH → rebuild Docker
+- **CI/CD :** GitHub → GitHub Actions → SSH → rebuild Docker (workflow créé, secrets pas encore configurés)
 
 ## État d'avancement
 
-### ✅ Terminé
-- Phase 1 : Contacts CRUD
-- Phase 2 : Products CRUD
-- Phase 3 : Pipeline kanban drag & drop (@dnd-kit)
-- Phase 4 : Facturation — devis + factures + PDF (jsPDF)
-- Dashboard + Analytics avec données live des stores Zustand
+### ✅ Étape 1 — Base de données + Auth (terminé)
+- Prisma 5.22.0 installé, schéma complet (contacts, products, deals, deal_lines, invoices, invoice_lines, quotes, quote_lines, users)
+- PostgreSQL sur Hostinger utilisé en local via SSH tunnel (`ssh -L 5432:localhost:5432 root@72.61.197.14 -N -f`)
+- Tous les stores Zustand remplacés par API routes Next.js + Prisma
+- NextAuth.js installé, page login, middleware de protection des routes
+- Seed exécuté : admin robin@duale.fr / admin123, 10 contacts, 7 produits, 10 deals, 6 factures
 
-### Roadmap dans l'ordre
+### ✅ Étape 2 — GitHub (terminé)
+- Repo : https://github.com/RobinDuale/CRM-Studeria
+- `.env.local` et `.env.production` dans `.gitignore`
+- `.env` (non-sensible) committé
 
-**Étape 1 — Base de données + Auth (à faire en local d'abord)**
-- Installer Prisma, définir le schéma (contacts, products, deals, deal_lines, invoices, invoice_lines, quotes, quote_lines)
-- Lancer PostgreSQL en Docker local pour les tests
-- Remplacer les stores Zustand par des API routes Next.js + Prisma
-- Installer NextAuth.js, créer page login, protéger les routes (middleware)
+### 🔄 Étape 3 — GitHub Actions (en cours)
+- Fichier `.github/workflows/deploy.yml` créé et committé
+- **TODO** : Ajouter les secrets dans les settings du repo GitHub :
+  - `SSH_HOST` = 72.61.197.14
+  - `SSH_USER` = root
+  - `SSH_KEY` = contenu de `~/.ssh/id_rsa`
 
-**Étape 2 — GitHub**
-- Créer repo GitHub (public OK, `.env.local` dans `.gitignore`)
-- Pusher le code
-
-**Étape 3 — GitHub Actions**
-- `.github/workflows/deploy.yml` : push sur `main` → SSH → rebuild Docker → restart CRM
-- Secrets : SSH_HOST, SSH_USER, SSH_KEY
-
-**Étape 4 — Déploiement Hostinger**
-- Ajouter dans `/root/docker-compose.yml` : services `postgres`, `adminer`, `crm`
-- CRM : crmstud.duale.fr
+### 🔄 Étape 4 — Déploiement Hostinger (en cours — build Docker en échec)
+- docker-compose.yml sur le serveur mis à jour avec services `postgres`, `adminer`, `crm`
+- `/root/crm/.env.production.local` créé sur le serveur (non committé)
+- **Dernier commit poussé** : `db4df1c` — fix dossier `public/` manquant
+- **Prochaine action** : `git pull + docker compose build crm + docker compose up -d crm` sur le serveur
+- CRM : crmstud.duale.fr (DNS A record à créer : crmstud.duale.fr → 72.61.197.14)
 - Adminer : adminer.srv1161197.hstgr.cloud
-- Traefik gère SSL automatiquement
-- Cron de sauvegarde PostgreSQL
+
+## Historique des erreurs Docker corrigées
+1. ~~Sidebar importait `@/lib/supabase/client`~~ → remplacé par NextAuth `signOut`
+2. ~~`QuoteLine` importé depuis `@prisma/client` (pas encore généré au build)~~ → remplacé par `@/lib/types`
+3. ~~`/app/public` not found~~ → dossier `public/.gitkeep` créé et committé
+4. `prisma generate` manquant dans le Dockerfile → ajouté (`RUN pnpm prisma generate` avant `RUN pnpm build`)
+
+## Architecture des pages (pattern Server → Client)
+
+Chaque page dashboard suit ce pattern :
+- `page.tsx` : Server Component, `export const dynamic = "force-dynamic"`, fetch Prisma, `JSON.parse(JSON.stringify(rows))` pour sérialiser les dates, passe les données au client
+- `*-client.tsx` : Client Component (`"use client"`), gère l'UI et les appels API fetch
+
+## Fichiers clés
+
+- `src/lib/types.ts` : types TypeScript partagés (Contact, Product, Deal, Invoice, Quote, etc.)
+- `src/lib/prisma.ts` : singleton PrismaClient
+- `src/lib/auth.ts` : config NextAuth (credentials provider + JWT callbacks)
+- `src/middleware.ts` : protection des routes via NextAuth middleware
+- `src/types/next-auth.d.ts` : augmentation des types Session et JWT pour inclure `user.id`
+- `prisma/schema.prisma` : schéma Prisma 5 avec `url = env("DATABASE_URL")`
+- `prisma/seed.ts` : seed idempotent avec `upsert`
+- `Dockerfile` : multi-stage build, inclut `pnpm prisma generate` avant `pnpm build`
+- `.github/workflows/deploy.yml` : CI/CD GitHub Actions → SSH → docker compose
 
 ## Serveur Hostinger
 
@@ -55,14 +76,20 @@ Développement local terminé (Phases 1–4 complètes avec mock data Zustand).
 - n8n tourne sur : n8n.srv1161197.hstgr.cloud
 - OS : Ubuntu 24.04, Docker installé, Traefik actif
 - Connexion SSH via Python paramiko (sshpass non disponible)
+- docker-compose.yml principal : `/root/docker-compose.yml`
+- Code CRM : `/root/crm/`
+- Env prod : `/root/crm/.env.production.local`
 - **Documentation complète du serveur** : https://app.notion.com/p/3795b86a8bb4804d978acc47e3ccbb42
 
 ## Règles de développement
 
-- Auth bypassée pour dev local : `src/middleware.ts` retourne `NextResponse.next()` sans condition
-- Zustand + `.filter()` dans les selectors = infinite loop → utiliser `useMemo` après avoir sélectionné le tableau complet
-- PDF : ne pas utiliser `toLocaleString("fr-FR")` pour les nombres → utiliser `fmt()` dans `src/lib/pdf.ts`
+- `@prisma/client` n'exporte pas les types de modèles avant `prisma generate` → importer depuis `@/lib/types` à la place
+- `export const dynamic = "force-dynamic"` obligatoire sur toutes les pages dashboard (sinon Next.js essaie de les pré-rendre statiquement et plante)
+- Prisma 7 cassé (url non supportée dans schema.prisma) → rester sur Prisma 5.22.0
+- Auth bypassée pour dev local : `src/middleware.ts` avec NextAuth middleware (pas de bypass manuel)
+- PDF : ne pas utiliser `toLocaleString("fr-FR")` → utiliser `fmt()` dans `src/lib/pdf.ts`
 - Redémarrer le serveur : Bash tool avec `run_in_background: true`, ne pas ouvrir une nouvelle fenêtre PowerShell
+- SSH tunnel pour dev local contre la DB Hostinger : `ssh -L 5432:localhost:5432 root@72.61.197.14 -N -f`
 
 ## Commandes utiles
 
@@ -70,9 +97,24 @@ Développement local terminé (Phases 1–4 complètes avec mock data Zustand).
 # Démarrer le serveur de dev
 pnpm dev
 
-# Build
+# Build local
 pnpm build
 
 # Vider le cache Next.js
 Remove-Item -Recurse -Force .next
+
+# SSH tunnel vers la DB Hostinger (pour prisma db push / seed en local)
+ssh -L 5432:localhost:5432 root@72.61.197.14 -N -f
+
+# Seed de la base
+pnpm prisma db push
+pnpm seed
+```
+
+```python
+# Rebuild sur Hostinger (via Python paramiko)
+# cd /root/crm && git pull origin main
+# cd /root && docker compose build crm > /tmp/crm_build.log 2>&1
+# docker compose up -d crm
+# docker compose exec -T crm npx prisma migrate deploy
 ```
