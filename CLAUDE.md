@@ -40,7 +40,7 @@ Migration Zustand → Prisma + API routes terminée. Déploiement Hostinger opé
 ### ✅ Étape 4 — Déploiement Hostinger (terminé)
 - docker-compose.yml sur le serveur mis à jour avec services `postgres`, `adminer`, `crm`
 - `/root/crm/.env.production.local` créé sur le serveur (non committé)
-- **Dernier commit poussé** : `ed43b49` — skip deploy migrations when none exist
+- **Dernier commit technique de déploiement** : `ed43b49` — skip deploy migrations when none exist
 - Build Docker serveur réussi et container CRM démarré
 - CRM : https://crmstud.duale.fr
 - Vérification HTTP publique : `https://crmstud.duale.fr` répond `200 OK` et sert la page de login
