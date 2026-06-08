@@ -10,6 +10,7 @@ import {
   FileText,
   LogOut,
   TrendingUp,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/products", label: "Produits", icon: Package },
   { href: "/invoices", label: "Facturation", icon: FileText },
   { href: "/analytics", label: "Pilotage", icon: TrendingUp },
+  { href: "/settings", label: "Paramètres", icon: Settings },
 ];
 
 export function Sidebar() {
