@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signOut } from "next-auth/react";
 import { KeyRound, Check, AlertCircle } from "lucide-react";
 
 export function SettingsClient() {
@@ -33,9 +34,8 @@ export function SettingsClient() {
         setError(data.error ?? "Erreur inconnue");
       } else {
         setSuccess(true);
-        setCurrent("");
-        setNext("");
-        setConfirm("");
+        // Invalide la session courante — force une reconnexion avec le nouveau mot de passe
+        setTimeout(() => signOut({ callbackUrl: "/login" }), 1500);
       }
     } finally {
       setLoading(false);
