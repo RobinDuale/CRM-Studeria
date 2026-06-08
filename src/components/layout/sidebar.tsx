@@ -12,7 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { signOut } from "next-auth/react";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
@@ -28,8 +28,7 @@ export function Sidebar() {
   const router = useRouter();
 
   async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     router.push("/login");
     router.refresh();
   }
@@ -39,18 +38,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 border-b border-zinc-200 px-4">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600">
-          <svg
-            className="h-4 w-4 text-white"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-            />
+          <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
         <span className="text-sm font-semibold text-zinc-900">Mon CRM</span>
@@ -75,19 +65,14 @@ export function Sidebar() {
                   : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
               )}
             >
-              <Icon
-                className={cn(
-                  "h-4 w-4 shrink-0",
-                  isActive ? "text-indigo-600" : "text-zinc-400"
-                )}
-              />
+              <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-indigo-600" : "text-zinc-400")} />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* User + logout */}
+      {/* Logout */}
       <div className="border-t border-zinc-200 p-3">
         <button
           onClick={handleSignOut}
