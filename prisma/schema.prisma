@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Contact {
+  id         String   @id @default(cuid())
+  first_name String
+  last_name  String
+  email      String   @unique
+  phone      String   @default("")
+  company    String   @default("")
+  address    String?
+  notes      String?
+  created_at DateTime @default(now())
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  description String  @default("")
+  unit_price  Float
+  unit        String  @default("jour")
+  is_active   Boolean @default(true)
+}
+
+model Deal {
+  id             String     @id @default(cuid())
+  title          String
+  contact        String     @default("")
+  company        String     @default("")
+  amount         Float      @default(0)
+  stage          String     @default("prospect")
+  expected_close String?
+  notes          String?
+  created_at     DateTime   @default(now())
+  lines          DealLine[]
+}
+
+model DealLine {
+  id           String @id @default(cuid())
+  deal_id      String
+  deal         Deal   @relation(fields: [deal_id], references: [id], onDelete: Cascade)
+  product_id   String @default("")
+  product_name String
+  unit         String @default("jour")
+  quantity     Float
+  unit_price   Float
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  invoice_number String        @unique
+  contact        String        @default("")
+  company        String        @default("")
+  amount         Float         @default(0)
+  status         String        @default("draft")
+  issue_date     String
+  due_date       String
+  notes          String?
+  created_at     DateTime      @default(now())
+  lines          InvoiceLine[]
+}
+
+model InvoiceLine {
+  id          String  @id @default(cuid())
+  invoice_id  String
+  invoice     Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unit_price  Float
+  discount    Float   @default(0)
+  tax_rate    Float   @default(20)
+}
+
+model Quote {
+  id           String      @id @default(cuid())
+  quote_number String      @unique
+  contact      String      @default("")
+  company      String      @default("")
+  amount       Float       @default(0)
+  status       String      @default("draft")
+  issue_date   String
+  valid_until  String
+  notes        String?
+  created_at   DateTime    @default(now())
+  lines        QuoteLine[]
+}
+
+model QuoteLine {
+  id          String @id @default(cuid())
+  quote_id    String
+  quote       Quote  @relation(fields: [quote_id], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unit_price  Float
+  discount    Float  @default(0)
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String?
+  created_at DateTime @default(now())
+}

@@ -1,0 +1,8 @@
+.next
+node_modules
+.git
+*.md
+inspect_server.py
+read_compose.py
+read_domain.py
+read_env.py

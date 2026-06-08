@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# production build
+build/
+
+# env files — NEVER commit secrets
+.env.local
+.env.*.local
+.env.production
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# misc
+.DS_Store
+*.pem
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Infrastructure / automation scripts (contain server details)
+*.py
+*.ps1
+.claude/
+
+# Supabase legacy
+supabase/
